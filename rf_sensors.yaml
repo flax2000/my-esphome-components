@@ -1,0 +1,77 @@
+esphome:
+  name: rf-sensors
+  platform: ESP8266
+  board: esp01_1m
+
+
+
+wifi:
+  output_power: 12 #10-20
+  power_save_mode: HIGH #HIGH NONE LIGHT
+  fast_connect: true 
+  ssid: "xxxxxxxxxxx"
+  password: "xxxxxxxxx"
+  #use_address: minimal-tst.local
+
+  
+# Enable logging
+logger:
+  baud_rate: 0 
+  
+# Enable Home Assistant API
+api:
+
+ota:
+    safe_mode: True
+  
+
+
+external_components:
+  source: github://flax2000/my-esphome-components@main
+#  - source:
+#      type: local
+#      path: my_components
+
+
+
+
+
+rf_sensors:
+  pin: 3
+  on_sensor_received:
+          - lambda: |-          
+              ESP_LOGD("wh2", "wh2 id:%i tmp %.1f hum %.0f ", data.id, data.temperature, data.humidity);
+              if(data.id==99)
+              {
+                          id(wh2_temperature_).publish_state(data.temperature);
+                          id(wh2_humidity_).publish_state(data.humidity);
+              }
+              
+              
+ 
+sensor:
+     
+- platform: template          
+  name: "wh2 temperature"
+  unit_of_measurement: °C
+  accuracy_decimals: 1
+  device_class: "temperature"
+  state_class: "measurement"      
+  id: wh2_temperature_
+  filters:
+    - median:
+        window_size: 3
+        send_every: 1
+        
+- platform: template
+  name: "wh2 humidity"
+  unit_of_measurement: '%'
+  accuracy_decimals: 0
+  device_class: "humidity"
+  state_class: "measurement"    
+  id: wh2_humidity_
+  filters:
+    - median:
+        window_size: 3
+        send_every: 1
+  
