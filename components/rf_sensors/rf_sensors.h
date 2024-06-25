@@ -60,7 +60,7 @@ class RF_SensorsComponent : public Component {
   protected:
     //#if defined(USE_ESP8266) || defined(USE_LIBRETINY)
     RemoteReceiverComponentStore store_;
-    HighFrequencyLoopRequester high_freq_;
+    //HighFrequencyLoopRequester high_freq_;
     //#endif
     InternalGPIOPin *pin_;
     CallbackManager<void(RF_SensorsData)> data_callback_;
