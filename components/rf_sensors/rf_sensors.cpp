@@ -38,6 +38,9 @@ int16_t rssi_packet = 0;
 int16_t rssi_background = 0;
 volatile uint16_t get_rssi = false;
 #endif
+
+
+ //used "https://github.com/lucsmall/BetterWH2" as a starting point
 /* --------------------------------------------------fine off----------------------------------
   // 1 is indicated by 500uS pulse
   // wh2_accept from 2 = 400us to 3 = 600us
@@ -58,7 +61,6 @@ volatile uint16_t get_rssi = false;
 // worst case packet length
 #define IS_IDLE_PULSE(interval)  (interval >= 800 && interval <= 1500) //700 //1199
 // our expected pulse should arrive after 1ms
-
 
 
 
@@ -107,7 +109,7 @@ void RECEIVE_ATTR fine_off_rx(uint16_t duration)
 #endif
       }
 
-      else if (IS_IDLE_PULSE(duration_old) && IS_LOW_PULSE(duration) && (counter_fine_off > 2 || preamble_done == true)) //preamble 0xff >4 because might miss the first few....
+      else if (IS_IDLE_PULSE(duration_old) && IS_LOW_PULSE(duration) && (counter_fine_off > 2 || preamble_done == true)) //preamble 0xff >2 because might miss the first few....
       {
         if (preamble_done == false)
         {
@@ -207,7 +209,6 @@ void IRAM_ATTR HOT RemoteReceiverComponentStore::gpio_intr(RemoteReceiverCompone
 
 
 
-
 //finoffset decoding are from rtl_433
 
 
@@ -256,7 +257,7 @@ void RF_SensorsComponent::loop() {
       ESP_LOGD("wh2", "--BAD crc-- ");
     }
 
-    if (wh2_valid == true) //avoid change sensor data during update...
+    if (wh2_valid == true) 
     {
       temp = temperature / 10.0;
       hum = humidity;
@@ -296,7 +297,6 @@ void RF_SensorsComponent::loop() {
 
 
 
-
     }
     fine_off_packet_done = false;
   }
@@ -305,10 +305,13 @@ void RF_SensorsComponent::loop() {
 
 void RF_SensorsComponent::setup() {
   ESP_LOGCONFIG(TAG, "Setting up RF433...");
+  this->pin_->pin_mode(gpio::FLAG_NONE);
   this->pin_->pin_mode(gpio::FLAG_INPUT);
-  //this->pin_->digital_write(false);
   this->pin_->attach_interrupt(RemoteReceiverComponentStore::gpio_intr, &this->store_, gpio::INTERRUPT_ANY_EDGE);
   //this->pin_->setup();
+
+
+
 
 }
 
