@@ -22,7 +22,8 @@ logger:
 api:
 
 ota:
-    safe_mode: True
+  - platform: esphome
+
   
 
 
