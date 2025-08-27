@@ -1,0 +1,163 @@
+#made by swe-dude
+esphome:
+  name: rf-raw
+  platformio_options:
+     board_build.f_cpu: 160000000L
+  #on_boot:
+  #  then:
+  #    - lambda: App.set_loop_interval(0); // shorter loop interval
+
+esp8266:
+  board: esp01_1m
+  framework:
+    version: recommended
+
+wifi:
+  ssid: "xxxx"
+  password: "xxxxx"
+  fast_connect: true 
+
+
+# Enable logging
+logger:
+  baud_rate: 0 
+
+
+
+
+# Enable Home Assistant API
+api:
+  reboot_timeout: 0s
+  services:
+    - service: send_raw #can send raw timings from homeassistant service
+      variables:
+        raw_timings: int[]
+        repeats: int        
+      then:
+        - lambda: |-  
+            auto call = id(my_tx).transmit();
+            auto data = call.get_data();
+            esphome::remote_base::RawTimings code_ = raw_timings;
+            data->set_data(code_);
+            call.set_send_times(repeats);
+            call.set_send_wait(0);             
+            call.perform();
+
+
+    - service: rf_send_rc
+      variables:
+        adress: int
+        protocol: int
+        lenght: int
+      then:
+        - lambda: |-  
+            auto call = id(my_tx).transmit();
+            //uint64_t code = 6288992;  
+            esphome::remote_base::RC_SWITCH_PROTOCOLS[protocol].transmit(call.get_data(), adress, lenght); //thank you Karosm.
+            call.set_send_times(12);
+            call.set_send_wait(0); 
+            call.perform();
+
+
+
+ota:
+  - platform: esphome
+
+
+external_components:
+  - source: github://flax2000/my-esphome-components/components@main
+    components: [ rf_raw ]
+  #- source:
+  #    type: local
+  #    path: my_components
+
+
+rf_raw:
+  pin: 3
+          
+
+
+remote_transmitter:
+  pin: 1
+  id: my_tx
+  carrier_duty_percent: 100% 
+  on_transmit:
+    then:
+      - lambda: |-  
+          //esphome::rf_raw::rx_int_off();
+  on_complete:
+    then:
+      - lambda: |-  
+          //esphome::rf_raw::rx_int_on();
+   
+
+
+
+switch:
+  - platform: template
+    name: "find raw repeating"
+    optimistic: true
+    turn_on_action:
+      then:
+        - lambda: |-  
+            esphome::rf_raw::set_capture433_repeating(1);
+    turn_off_action:
+      then:
+        - lambda: |-  
+            esphome::rf_raw::set_capture433_repeating(0);
+
+  - platform: template
+    name: "rc switch"
+    optimistic: true
+    turn_on_action:
+      then:
+        - lambda: |-  
+            esphome::rf_raw::set_rc_switch(1);
+    turn_off_action:
+      then:
+        - lambda: |-  
+            esphome::rf_raw::set_rc_switch(0);
+
+
+
+button:
+  - platform: template
+    name: "capture 1000 timings"
+    on_press:
+      then:
+        - lambda: |-  
+            esphome::rf_raw::set_capture433(1);
+
+
+number:
+  - platform: template
+    name: "nSeparationLimit"
+    optimistic: true
+    min_value: 100
+    max_value: 20000
+    step: 50
+    initial_value: 2000 
+    mode: slider
+    set_action:
+      then:
+        - lambda: |-  
+            esphome::rf_raw::set_nSeparationLimit(x);
+
+
+  - platform: template
+    name: "tolerance"
+    optimistic: true
+    min_value: 0
+    max_value: 150
+    step: 1
+    initial_value: 90 
+    mode: slider
+    set_action:
+      then:
+        - lambda: |-  
+            esphome::rf_raw::set_tolerance(x);
+
+
+
+
+
