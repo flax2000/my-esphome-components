@@ -30,8 +30,8 @@ ota:
   
 
 external_components:
-  source: github://flax2000/my-esphome-components@main
-  components: [ rf_sensors ]
+  - source: github://flax2000/my-esphome-components/components@main
+    components: [ rf_sensors ]
 #  - source:
 #      type: local
 #      path: my_components
