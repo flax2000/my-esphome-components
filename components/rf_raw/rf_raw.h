@@ -27,12 +27,12 @@
 namespace esphome {
 namespace rf_raw {
 
-#if defined(USE_ESP8266) || defined(USE_LIBRETINY)
+//#if defined(USE_ESP8266) || defined(USE_LIBRETINY)
 struct RemoteReceiverComponentStore {
   static void gpio_intr(RemoteReceiverComponentStore *arg);
 
 };
-#endif
+//#endif
 
 
 void set_capture433(int8_t);
@@ -62,10 +62,10 @@ class RF_RawComponent : public Component {
 
 
  protected:
-#if defined(USE_ESP8266) || defined(USE_LIBRETINY)
+//#if defined(USE_ESP8266) || defined(USE_LIBRETINY)
   RemoteReceiverComponentStore store_;
   HighFrequencyLoopRequester high_freq_;
-#endif
+//#endif
 
 
 };
