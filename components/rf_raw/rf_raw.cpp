@@ -1,4 +1,3 @@
-//made by swe-dude
 #include "rf_raw.h"
 #include "esphome/core/log.h"
 #include <cinttypes>
@@ -23,7 +22,7 @@ volatile VAR_ISR_ATTR int16_t nSeparation_pulse_state;
 
 
 
-
+volatile VAR_ISR_ATTR int16_t pulse_state;
 
 
 
@@ -257,13 +256,22 @@ void RECEIVE_ATTR raw_data(uint16_t duration) {
 
 int32_t timings_raw_capture[RAW_CAPTURE_MAX_CHANGES];
 boolean raw_capture_done=0;
-
-void RECEIVE_ATTR raw_data_capture(uint16_t duration) {
+boolean start_pulse_captured=0;
+void RECEIVE_ATTR raw_data_capture(uint16_t duration) 
+{
 
   static uint16_t counter = 0;
   
   if(raw_capture_done==0&&capture433==1)
   {
+    if (duration > nSeparationLimit&&counter==0) 
+    {
+      pulse_state = !(RX433_PIN->digital_read());
+      start_pulse_captured=1;
+    }
+if(start_pulse_captured)
+{
+
 	if(counter<RAW_CAPTURE_MAX_CHANGES)
 	{		
 	 timings_raw_capture[counter]=duration; 
@@ -271,15 +279,11 @@ void RECEIVE_ATTR raw_data_capture(uint16_t duration) {
 	}
 else
 {
+start_pulse_captured=0;
 counter=0;	
 capture433=0;	
-raw_capture_done=1;	
-	
-}	
-	
-  }
-
-}
+raw_capture_done=1;		
+}}}}
 
 
 
@@ -390,24 +394,26 @@ if(recieve_rc_adress)
 
 
 
-
       if (raw_capture_done == 1)
       {
+
         //below modefied code from esphome raw_protocol.cpp
-        static const char *const TAG = "diy raw capture";
+        static const char *const TAG = "diy raw";
         char buffer[256];
         uint32_t buffer_offset = 0;
-        buffer_offset += sprintf(buffer, "size: %i  ", (RAW_CAPTURE_MAX_CHANGES - 1));
-        for (int32_t i = 0; i < RAW_CAPTURE_MAX_CHANGES - 1; i++)
+        buffer_offset += sprintf(buffer, "size: %i idle pulse %i pulses: [", (RAW_CAPTURE_MAX_CHANGES), timings_raw_capture[0]);
+        for (int32_t i = 0; i < RAW_CAPTURE_MAX_CHANGES; i++)
         {
           const int32_t value = timings_raw_capture[i]; //-->> dont write the idle pulse here
           const uint32_t remaining_length = sizeof(buffer) - buffer_offset;
           int written;
 
-            if (i < RAW_CAPTURE_MAX_CHANGES - 1) {
-              written = snprintf(buffer + buffer_offset, remaining_length, "%d,", value);
+          if (nSeparation_pulse_state)
+          {
+            if (i < RAW_CAPTURE_MAX_CHANGES-1) {
+              written = snprintf(buffer + buffer_offset, remaining_length, "-%d, ", value);
             } else {
-              written = snprintf(buffer + buffer_offset, remaining_length, "%d", value);
+              written = snprintf(buffer + buffer_offset, remaining_length, "-%d]", value);
             }
 
             if (written < 0 || written >= int(remaining_length)) {
@@ -416,24 +422,47 @@ if(recieve_rc_adress)
               ESP_LOGD(TAG, "%s", buffer);
               buffer_offset = 0;
               written = sprintf(buffer, "  ");
-              if (i < RAW_CAPTURE_MAX_CHANGES) {
-                written += sprintf(buffer + written, "%d,", value);
+              if (i < RAW_CAPTURE_MAX_CHANGES-1) {
+                written += sprintf(buffer + written, "-%d, ", value);
               } else {
-                written += sprintf(buffer + written, "%d", value);
+                written += sprintf(buffer + written, "-%d]", value);
               }
             }
-          
+          }
+          else
+          {
 
+            if (i < RAW_CAPTURE_MAX_CHANGES-1) {
+              written = snprintf(buffer + buffer_offset, remaining_length, "%d, ", value);
+            } else {
+              written = snprintf(buffer + buffer_offset, remaining_length, "%d]", value);
+            }
 
+            if (written < 0 || written >= int(remaining_length)) {
+              // write failed, flush...
+              buffer[buffer_offset] = '\0';
+              ESP_LOGD(TAG, "%s", buffer);
+              buffer_offset = 0;
+              written = sprintf(buffer, "  ");
+              if (i < RAW_CAPTURE_MAX_CHANGES-1) {
+                written += sprintf(buffer + written, "%d, ", value);
+              } else {
+                written += sprintf(buffer + written, "%d]", value);
+              }
+            }
+          }
+
+          nSeparation_pulse_state = !nSeparation_pulse_state;
           buffer_offset += written;
         }
         if (buffer_offset != 0) {
           ESP_LOGD(TAG, "%s", buffer);
         }
 
-        ESP_LOGD(TAG, "signal done ");
+        ESP_LOGD(TAG, "pulses done ");
         ESP_LOGD("", "");
         raw_capture_done = 0;
+
       }
 
 
